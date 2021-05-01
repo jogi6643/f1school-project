@@ -1,0 +1,166 @@
+<?xml version="1.0"?>
+<Supermodule>
+	 <Module>
+	     <id>1</id>
+		 <modulename>Dashboard</modulename>
+		 <rights>
+		  
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	     <id>2</id>
+		 <modulename>Location Master</modulename>
+		  <rights>
+		   
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	     <id>3</id>
+		 <modulename>Competition Master</modulename>
+		 <rights>
+		   
+		    <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	
+	<Module>
+	<id>5</id>
+	 <modulename>Activity Master</modulename>
+	 <rights>
+		    
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>6</id>
+	 <modulename>Course Name</modulename>
+	 <rights>
+		    
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>7</id>
+	 <modulename>Plan Master</modulename>
+	 <rights>
+		   
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>8</id>
+	 <modulename>Trainer Master</modulename><rights>
+		  
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	<id>9</id>
+	 <modulename>Manufacturing Application</modulename>
+	 <rights>
+		   
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>10</id>
+	 <modulename>Order List</modulename>
+	 <rights>
+		   
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	<id>11</id>
+	 <modulename>Price Master</modulename>
+	 <rights>
+		    <id>1</id>
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>12</id>
+	 <modulename>Assign Price Master</modulename>
+	 <rights>
+		    
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	<id>16</id>
+	 <modulename>Trainer Assigned</modulename>
+	 <rights>
+		    
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	
+	<Module>
+	<id>13</id>
+	 <modulename>Sponsorship</modulename><rights>
+		  
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		
+    </Module>
+	<Module>
+	<id>14</id>
+	 <modulename>Team</modulename>
+	 <rights>
+		
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	<id>15</id>
+	 <modulename>School</modulename>
+	 <rights>
+		
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	<Module>
+	<id>18</id>
+	 <modulename>Student</modulename>
+	 <rights>
+		
+		  <name>View</name>
+		   <name>Modify</name>
+		 </rights>
+		 
+    </Module>
+	
+	
+	
+</Supermodule>

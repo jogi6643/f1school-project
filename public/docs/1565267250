@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Http\Controllers\Trainerrole;
+
+use App\Competition;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Auth;
+use App\Model\SchoolTrainer;
+use App\Model\Trainer;
+use App\School;
+use DB;
+class Trainer_school extends Controller
+{
+    public function assignedschool()
+    {
+        $trainerid=Auth::user()->email;
+        $id=Trainer::where('email',$trainerid)->first()->id;
+        $name=Trainer::where('email',$trainerid)->first()->name;
+        $trschool=Trainer::find($id)->SchoolTrainer;
+        
+       
+ 
+ $sch=array();
+     foreach($trschool as $key=>$info1){
+
+        //  $trschool[$key]->schoolname=School::where('id',$info1->school_id)->first()->school_name;
+        // $sch[$key]->schoolname=School::where('id',$info1->school_id)->first()->school_name;
+        
+        $sch[]=$info1->school_id;
+        
+     }
+    
+    $grouschid= array_unique($sch); 
+    $scoolname=School::whereIn('id',$grouschid)->get();
+    
+    
+     
+     
+        return view('Trainer.assignschool',compact('scoolname','name'));
+    }
+    
+    
+public function trschooinfo($v)
+    {
+        $k=School::find(base64_decode($v));
+        $zone=isset(DB::table('locations')->where('id',$k->zone)->first()->zone)?DB::table('locations')->where('id',$k->zone)->first()->zone:"";
+        $state=isset(DB::table('tbl_state')->where('id',$k->state)->first()->name)?DB::table('tbl_state')->where('id',$k->state)->first()->name:"";
+        $city=isset(DB::table('tbl_city')->where('id',$k->city)->first()->name)?DB::table('tbl_city')->where('id',$k->city)->first()->name:"";
+        return view('Trainer.assignedSchooldetails',compact('k','zone','state','city'));
+    }
+    
+    public function viewplanshowT($school)
+    {
+        
+         $plans=DB::table('memberships')->get();
+            
+              $schoolname=DB::table('schools')->select('school_name')->where('id',base64_decode($school))->first();
+              
+              $planperschool=DB::table('memberships')
+              ->join('schoolplanmaster','schoolplanmaster.plan','=','memberships.id')
+              ->orderBy('year', 'DESC')
+              ->select('*')->where('schoolid',base64_decode($school))->get();
+              foreach( $planperschool as $key=>$plans1)
+              {
+                  $planperschool[$key]->counts=DB::table('participantstudents')->where('year',$plans1->year)->where('schoolid',$plans1->schoolid)->count();
+              }
+             
+              return view('Trainer.showplanT',compact('plans','school','schoolname','planperschool'));
+    }
+}

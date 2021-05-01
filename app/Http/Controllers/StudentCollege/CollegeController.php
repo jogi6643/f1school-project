@@ -1,0 +1,1724 @@
+<?php
+namespace App\Http\Controllers\StudentCollege;
+
+use Illuminate\Http\Request;
+use DB;
+use Session;
+use App\Payment;
+use Redirect, Response;
+use Auth;
+use App\Activateaccount;
+use App\CollegePayment;
+use Mail;
+use Alert;
+use App\Model\StudentModel\Team_Store;
+use App\Model\StudentModel\StudentTeam_Role;
+use App\Model\AssignedCoursetype;
+use App\Http\Controllers\Controller;
+use App\Studentinfo;
+use App\School;
+use App\Login_Academic_Year;
+use Validator;
+
+use App\Model\Competition\Schoolteamcomp;
+// use App\Model\Manufacture\Stcarbodypart;
+// use App\Model\Student;
+
+// use App\Model\AssignedCoursetype;
+// use App\Model\Manufacture\CarType;
+// use App\Model\Manufacture\Stcarbodypart;
+// use App\Model\Competition\Schoolteamcomp;
+// use App\Model\Student;
+// use App\Studentinfo;
+// use App\Model\StudentModel\StudentTeam_Role;
+// use App\Model\StudentModel\Team_Store;
+// use Validator;
+// use App\Model\Cartdetail;
+// use App\Model\Payment;
+// use App\Model\Part;
+// use App\Model\Material;
+// use App\Model\Partplan;
+// use App\Model\Manufacture\Orederstaus;
+// use App\Model\Assignpriceinschool;
+// use App\Model\Plan;
+// use App\AcademicYear;
+// use App\Login_Academic_Year;
+// use App\Model\Competition\Competitionstore;
+// use App\Membership;
+// use App\Participatestudent;
+use App\Awards;
+// use Illuminate\Support\Facades\Input;
+// use Cookie;
+// use IlluminateCookieCookieJar;
+// use Illuminate\Support\Facades\Response;
+// use App\Otp;
+// use App\User;
+// use Crypt;
+class CollegeController extends Controller
+{
+    public function register_form()
+    {
+
+        $sendParameter = '';
+        $states = DB::table('tbl_state')->get();
+        return view('student_college.Register.register', compact('states', 'sendParameter'));
+    }
+
+    public function register(Request $request)
+    {
+
+        $validatedData = $request->validate(['first_name' => 'required', 'last_name' => 'required', 'email' => 'required|email|unique:schools', 'phone' => 'required|min:11|numeric', 'college' => 'required', 'password' => 'required|min:6', 'confarmation_password' => 'required|same:password', ]);
+
+        if (!empty($request->teamEmail))
+        {
+
+            $checkStudent_type = DB::table('students')->where('studentemail', $request->teamEmail)
+                ->where('register_type', 'F1Senior')
+                ->first();
+
+            if (!empty($checkStudent_type))
+            {
+
+                $checkTeam_store = DB::table('team_store')->where('student_id', $checkStudent_type->id)
+                    ->where('school_id', $checkStudent_type->school_id)
+                    ->first();
+
+                if (!empty($checkTeam_store))
+                {
+
+                    $schoolData = DB::table('schools')->insert([
+
+                    'school_name' => $request->college, 'type' => "college", 'state' => $request->state, 'city' => $request->city, 'mobile' => $request->phone, 'email' => $request->email, 'status' => '1']);
+
+                    $get_id_school = DB::table('schools')->where('email', $request->email)
+                        ->first()->id;
+
+                    $studentData = DB::table('students')->insert([
+
+                    'name' => $request->first_name . " " . $request->last_name, 'studentemail' => $request->email, 'username' => $request->email, 'mobileno' => $request->phone, 'dob' => $request->dob, 'school_id' => $get_id_school, 'register_type' => 'F1Senior', 'tsize' => $request->tshirt_size, 'status' => '1']);
+
+                    $userData = DB::table('users')->insert([
+
+                    'name' => $request->first_name . " " . $request->last_name, 'email' => $request->email,'username'=>$request->email, 'password' => bcrypt($request->password) , 'mobile_no' => $request->phone, 'role' => '6'
+
+                    ]);
+
+                    $get_id_student = DB::table('students')->where('studentemail', $request->email)
+                        ->first()->id;
+
+                    $userData = DB::table('studentTeam_Role')->insert([
+
+                    'teamid' => $checkTeam_store->id, 'studentid' => $get_id_student, 'Role_studentid' => 'role_' . $get_id_student, 'studentRole' => $request->userRole, 'schoolid' => $get_id_school, 'status' => '1'
+
+                    ]);
+
+                    Session::flash('success', "Registered Successfully.....");
+                    return redirect('studentCollegeLogin');
+
+                }
+                else
+                {
+                    Session::flash('success', "Sorry team is not created");
+                }
+            }
+            else
+            {
+
+                Session::flash('success', "Sorry Yor are not register because team is not created");
+            }
+
+        }
+        else
+        {
+
+            $schoolData = DB::table('schools')->insert([
+
+            'school_name' => $request->college, 'type' => "college", 'state' => $request->state, 'city' => $request->city, 'mobile' => $request->phone, 'email' => $request->email, 'status' => '1']);
+
+            $get_id_school = DB::table('schools')->where('email', $request->email)
+                ->first()->id;
+
+            $studentData = DB::table('students')->insert([
+
+            'name' => $request->first_name . " " . $request->last_name, 'studentemail' => $request->email, 'username' => $request->email,'mobileno' => $request->phone, 'dob' => $request->dob, 'school_id' => $get_id_school, 'register_type' => 'F1Senior', 'tsize' => $request->tshirt_size, 'status' => '1']);
+
+            $userData = DB::table('users')->insert([
+
+            'name' => $request->first_name . " " . $request->last_name, 'email' => $request->email,'username'=>$request->email, 'password' => bcrypt($request->password) , 'mobile_no' => $request->phone, 'role' => '6'
+
+            ]);
+
+            Session::flash('success', "Registered Successfully.....");
+            return redirect('studentCollegeLogin');
+
+        }
+        return redirect()
+            ->back();
+
+    }
+
+    public function login_form()
+    {
+
+        return view('student_college.Register.login');
+    }
+
+    public function login(Request $req)
+    {
+
+        $validatedData = $req->validate(['email' => 'required|email', 'password' => 'required']);
+        $credentials = $req->only('email', 'password');
+        if (Auth::attempt($credentials))
+        {
+        
+            $email = Auth::user()->email;
+            $role = Auth::user()->role;
+          
+            if ($role == 6)
+            {
+
+                $check = Studentinfo::select('school_id')->where('studentemail', $email)->first();
+                if ($check)
+                {
+                    $count = School::where('id', $check->school_id)
+                        ->count();
+                    if ($count == 0)
+                    {
+                        Auth::logout();
+                        $req->session()
+                            ->flash('danger', 'This user does not exits');
+                        return redirect('/studentCollegeLogin');
+                    }
+                }
+
+                $lastlogin = DB::table('students')->where('studentemail', $email)->update([
+
+                "last_login" => time() ,
+
+                ]);
+
+                $status = DB::table('students')->where('studentemail', $email)->first()->status;
+
+                if ($status == 1)
+                {
+                    $studentid = DB::table('students')->where('studentemail', $email)->first()->id;
+                    $schoolid = DB::table('students')->where('studentemail', $email)->first()->school_id;
+                    $details = $this->viewsCousrseS();
+
+                    if ($details != [])
+                    {
+                        $assigndata = $details['details'];
+                        $systemdate = $details['systemdate'];
+                        $pname = $details['pname'];
+                        $studentid = $details['studentid'];
+                        $schoolid = $details['schoolid'];
+                        $planid = $details['planid'];
+                    }
+
+                    return redirect('/studentcollagedashboard');
+                }
+                else
+                {
+
+                    Auth::logout();
+                    $req->session()
+                        ->flash('danger', 'Dear Student Your Account has been disabled Contact to School');
+                    return redirect('/studentCollegeLogin');
+                }
+
+            }
+            else
+            {
+                Auth::logout();
+                $req->session()
+                    ->flash('danger', 'Permission Denied Please Check Your Url....');
+                return redirect('/studentCollegeLogin');
+            }
+
+        }
+        else
+        {
+            Auth::logout();
+            $req->session()
+                ->flash('danger', 'These credentials do not match our records.');
+            return redirect('/studentCollegeLogin');
+        }
+
+    }
+
+    public function student_home()
+    {
+
+        $email = Auth::user()->email;
+
+        $role = Auth::user()->role;
+        if ($role == 6)
+        {
+
+            $status = Studentinfo::where('studentemail', $email)->first()->status;
+
+            if ($status == 1)
+            {
+                $studentid = Studentinfo::where('studentemail', $email)->first()->id;
+                $schoolid = Studentinfo::where('studentemail', $email)->first()->school_id;
+
+                $studentName = Studentinfo::select('students.name', 'schools.school_name', 'students.register_type','students.profileimage')
+                    ->join('schools', 'schools.id', '=', 'students.school_id')
+                    ->where('studentemail', $email)->first();
+
+
+                //code start by upanshu
+            
+
+                //code end by upanshu
+                $details = $this->viewsCousrseS();
+
+                if ($details != [])
+                {
+                    $assigndata = $details['details'];
+                    $systemdate = $details['systemdate'];
+                    $pname = $details['pname'];
+                    $studentid = $details['studentid'];
+                    $schoolid = $details['schoolid'];
+                    $planid = $details['planid'];
+                }
+            
+                return $this->studentprofile(base64_encode($studentid));
+
+            }
+        }
+    }
+
+    public function studentprofile($studentid)
+    {
+
+        $email = Auth::user()->email;
+        $role = Auth::user()->role;
+
+        if ($role == 6)
+        {
+            $status = Studentinfo::where('studentemail', $email)->first()->status;
+            if ($status == 1)
+            {
+                
+                    $studentid= Studentinfo::where('studentemail',$email)->first()->id;
+                    $schoolid= Studentinfo::where('studentemail',$email)->first()->school_id;
+
+                  $studentName = Studentinfo::select('students.name', 'schools.school_name', 'students.register_type','order_status','students.profileimage')
+                    ->join('schools', 'schools.id', '=', 'students.school_id')
+                    ->where('studentemail', $email)->first();
+                //code end by upanshu
+                $details = $this->viewsCousrseS();
+                if ($details != [])
+                {
+                    $assigndata = $details['details'];
+                    $systemdate = $details['systemdate'];
+                    $pname = $details['pname'];
+                    $studentid = $details['studentid'];
+                    $schoolid = $details['schoolid'];
+                    $planid = $details['planid'];
+                }
+
+                $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+    
+               
+
+            $data= Studentinfo::where('id',$studentid)->get()->map(function($input)use($studentid){
+            $teamid = StudentTeam_Role::where('studentid',$studentid)->first()->teamId??"NO";
+          
+
+              $input['teamname']=Team_Store::where('id',$teamid)->first()->team_Name??"NO";
+            
+
+              $input['teamid']=Team_Store::where('id',$teamid)->first()->id??"NO";
+              $input['classdata']=db::table('class')->select('id','class')->get()->toArray();
+              $input['tshirt']=db::table('tshirt')->select('id','tsize')->get()->toArray();
+                return $input;
+                })->toArray();
+
+                return view('student_college.Student.Collage_student_view', compact('assigndata', 'systemdate', 'pname', 'studentid', 'schoolid', 'planid', 'studentName', 'creatorteamid', 'data', 'appieddesign', 'oredersuccess', 'appiedcompetition', 'info', 'manufacture', 'email', 'collageTeamId', 'collageTeamuserstatus','Checkcomp'));
+
+            }
+        }
+    }
+
+    public function get_city(Request $request)
+    {
+
+        $city = DB::table('tbl_city')->where('state_id', $request->city)
+            ->get();
+        return $city;
+    }
+
+    public function college_pay(Request $request)
+    {
+
+        $userid = Auth::user()->id;
+        $useremail = Auth::user()->email;
+
+        $data = ['user_id' => $userid, 'user_email' => $useremail, 'school_id' => $request->school_id, 'student_id' => $request->student_id, 'payment_id' => $request->razorpay_payment_id, 'amount' => $request->totalAmount, 'type' => 'F1senior', 'status' => 'success'];
+
+        $getId = CollegePayment::insertGetId($data);
+        $arr = array(
+            'msg' => 'Payment successfully credited',
+            'status' => true
+        );
+
+        $orderSuccess = DB::table('students')->where('studentemail', $useremail)->update([
+
+        'order_status' => 'Success']);
+
+        return Response()
+            ->json($arr);
+    }
+
+    public function create_team($stschid)
+    {
+
+        //dd('ksks');
+        $email = Auth::user()->email;
+        $stschId = explode("_", base64_decode($stschid));
+        $sid = $stschId[0];
+        $scid = $stschId[1];
+        $studentname = DB::table('students')->find($sid)->name;
+
+        $students = DB::table('students')->select('id', 'name')
+            ->where('school_id', $scid)->get();
+
+        $studentName = DB::table('students')->select('students.id as student_id', 'students.name', 'students.register_type', 'students.order_status', 'schools.school_name', 'schools.id as school_id','students.profileimage')
+            ->join('schools', 'schools.id', '=', 'students.school_id')
+            ->where('studentemail', $email)->first();
+
+        $details = $this->viewsCousrseS();
+        if ($details != [])
+        {
+            $assigndata = $details['details'];
+            $systemdate = $details['systemdate'];
+            $pname = $details['pname'];
+            $studentid = $details['studentid'];
+            $schoolid = $details['schoolid'];
+            $planid = $details['planid'];
+        }
+
+          $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+        //return view('student_college.Team.test');
+        return view('student_college.Team.TeamCreate', compact('systemdate', 'assigndata', 'planid', 'schoolid', 'studentid', 'pname', 'studentName', 'sid', 'scid', 'students', 'studentname', 'collageTeamId', 'collageTeamuserstatus','Checkcomp'));
+    }
+
+    public function team_store(Request $request)
+    {
+
+        $this->validate($request, ['Team_Name' => 'required|unique:team_store'
+        // 'team_file' => 'required', 'team_file.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+        ]);
+
+        $date = date('Y');
+        $create_at = Team_Store::where('student_id', $request->student_id . "_student")
+            ->where('school_id', $request->school_Id)
+            ->whereraw("year(created_at)=$date")->first();
+
+        $request->ids = array_unique($request->ids??[]);
+        if ($create_at == null)
+        {
+            if ($request->hasfile('team_file'))
+            {
+                $image = $request->file('team_file');
+                $name = $request->Team_Name . "_" . time() . "." . $image->getClientOriginalExtension();
+                $image->move(public_path() . '/team/', $name);
+                $team = new Team_Store();
+                $team->team_Name = $request->Team_Name;
+                $team->team_Description = $request->about_team;
+                $team->team_Image = $name;
+                $team->student_id = $request->student_id . "_student";
+                $team->school_id = $request->school_Id;
+                $team->typeofstudent = 'F1Senior';
+                $team->save();
+                
+                $team->id;
+                $studentRole = "role_" . $request->student_id;
+                $s = new StudentTeam_Role();
+                $s->teamId = $team->id;
+                $s->schoolid = $request->school_Id;
+                $s->studentid = $request->student_id;
+                $s->Role_studentid = $studentRole;
+                $s->studentRole = $request->CreatorRole;
+                $s->status = 1;
+                $s->typeofstudent = 'F1Senior';
+                $s->save();
+
+                foreach ($request->ids as $students_id)
+                {
+
+                    $studentRole = "role_" . $students_id;
+                    $studentteamrole = new StudentTeam_Role();
+                    $studentteamrole->teamId = $team->id;
+                    $studentteamrole->schoolid = DB::table('team_store')
+                        ->find($team->id)->school_id;
+                    $studentteamrole->studentid = $students_id;
+                    $studentteamrole->Role_studentid = $studentRole;
+                    $studentteamrole->studentRole = $request->$studentRole;
+                     $studentteamrole->typeofstudent = 'F1Senior';
+                    $studentteamrole->save();
+
+                    $ids = $students_id . "_" . $team->id;
+                    $studentinfo = DB::table('students')->where('id', $students_id)->first();
+
+                    $link = url('/college_teamstatus') . "/" . base64_encode($ids);
+                    $teamname = Team_Store::find($team->id)->team_Name;
+                    $link1 = url('/college_teams_no') . "/" . base64_encode($ids);
+                    $data = array(
+                        'username' => $studentinfo->name,
+                        'email' => $studentinfo->studentemail,
+                        'link' => $link,
+                        'link1' => $link1,
+                        'teamname' => $teamname
+                    );
+
+                    $link2 = url('/invitation-college'). "/" . base64_encode($ids); 
+					/*
+// *********************************************Mobile Message****************************************************
+            $yes = '<a href="'.url("/college_teamstatus/")."/".base64_encode($ids).'">yes</a>';
+            $No = '<a href="'.url("/college_teams_no/")."/".base64_encode($ids).'">No</a>';
+
+            $student = Studentinfo::find($students_id);
+            $schoolname = School::where('id',$student->school_id)->first()->school_name;
+             $apikey = "YXPskaQxMk6oxtQcQbPo2Q";
+             $apisender = "TOSAPP";
+             $msg = "Dear ".strtoupper($student->name).",\r\n".$schoolname." Welcome aboard the world’s largest STEM based challenge for school - F1 in Schools™ online Platform. You have been requested to join the team.".$teamname."\r\nPlease click on the link to accept the invitation\r\n click here:".$link2;
+
+              $num ='91'.$student->mobileno;     // MULTIPLE NUMBER VARIABLE PUT HERE...!                 
+             $ms = rawurlencode($msg);   //This for encode your message content                     
+            $url = 'https://www.smsgatewayhub.com/api/mt/SendSMS?APIKey='.$apikey.'&senderid='.$apisender.'&channel=2&DCS=0&flashsms=0&number='.$num.'&text='.$ms.'&route=1';
+                               
+           //echo $url;
+           $ch=curl_init($url);
+           curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+           curl_setopt($ch,CURLOPT_POST,1);
+           curl_setopt($ch,CURLOPT_POSTFIELDS,"");
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER,2);
+            $data = curl_exec($ch);
+            
+           curl_error($ch);
+		   
+// ****************************************Mobile Message End******************************************************  
+*/              
+                     Mail::send('Mail.studentcollageinvitation', $data, function ($message) use ($data)
+                     {
+
+                         $message->to($data['email'], 'noreply@f1inschoolsindia.com')->subject('Welcome Aboard |F1 in Schools™ India');
+                        $message->from('noreply@f1inschoolsindia.com', 'F1 in Schools™ India');
+
+                    });
+                }
+                // End for Loop
+                $idtoview = $request->student_id . '_' . $request->school_Id;
+                return redirect('student/team/show/' . base64_encode($idtoview))->with('success', 'Team Created  has been successfully');
+                // return back()->with('success', 'Team Created  has been successfully');
+                
+            }
+
+            else
+            {
+
+                // $image = $request->file('team_file');
+                // $name = $request->Team_Name . "_" . time() . "." . $image->getClientOriginalExtension();
+                // $image->move(public_path() . '/team/', $name);
+                $team = new Team_Store();
+                $team->team_Name = $request->Team_Name;
+                $team->team_Description = $request->about_team;
+                $team->team_Image = '';
+                $team->student_id = $request->student_id . "_student";
+                $team->school_id = $request->school_Id;
+                $team->typeofstudent = 'F1Senior';
+                $team->save();
+                
+                $team->id;
+
+                $studentRole = "role_" . $request->student_id;
+                $s = new StudentTeam_Role();
+                $s->teamId = $team->id;
+                $s->schoolid = $request->school_Id;
+                $s->studentid = $request->student_id;
+                $s->Role_studentid = $studentRole;
+                $s->studentRole = $request->CreatorRole;
+                $s->status = 1;
+                 $s->typeofstudent = 'F1Senior';
+                $s->save();
+
+                foreach ($request->ids as $students_id)
+                {
+
+                    $studentRole = "role_" . $students_id;
+                    $studentteamrole = new StudentTeam_Role();
+                    $studentteamrole->teamId = $team->id;
+                    $studentteamrole->schoolid = DB::table('team_store')
+                        ->find($team->id)->school_id;
+                    $studentteamrole->studentid = $students_id;
+                    $studentteamrole->Role_studentid = $studentRole;
+                    $studentteamrole->studentRole = $request->$studentRole;
+                     $studentteamrole->typeofstudent = 'F1Senior';
+                    $studentteamrole->save();
+
+                    $ids = $students_id . "_" . $team->id;
+                    $studentinfo = DB::table('students')->where('id', $students_id)->first();
+                    $link = url('/college_teamstatus') . "/" . base64_encode($ids);
+                    $link1 = url('/college_teams_no') . "/" . base64_encode($ids);
+                    $teamname = Team_Store::find($team->id)->team_Name;
+                    $data = array(
+                        'username' => $studentinfo->name,
+                        'email' => $studentinfo->studentemail,
+                        'link' => $link,
+                        'link1' => $link1,
+                        'teamname' => $teamname
+                    );
+                     $link2 = url('/invitation-college'). "/" . base64_encode($ids);
+					 /*
+// *********************************************Mobile Message****************************************************
+               $yes = '<a href="'.url("/college_teamstatus/")."/".base64_encode($ids).'">yes</a>';
+            $No = '<a href="'.url("/college_teams_no/")."/".base64_encode($ids).'">No</a>';
+            $student = Studentinfo::find($students_id);
+            $schoolname = School::where('id',$student->school_id)->first()->school_name;
+             $apikey = "YXPskaQxMk6oxtQcQbPo2Q";
+             $apisender = "TOSAPP";
+             $msg = "Dear ".strtoupper($student->name).",\r\n".$schoolname." Welcome aboard the world’s largest STEM based challenge for school - F1 in Schools™ online Platform. You have been requested to join the team.".$teamname."\r\nPlease click on the link to accept the invitation\r\n click here:".$link2;
+
+              $num ='91'.$student->mobileno;     // MULTIPLE NUMBER VARIABLE PUT HERE...!                 
+             $ms = rawurlencode($msg);   //This for encode your message content                     
+            $url = 'https://www.smsgatewayhub.com/api/mt/SendSMS?APIKey='.$apikey.'&senderid='.$apisender.'&channel=2&DCS=0&flashsms=0&number='.$num.'&text='.$ms.'&route=1';
+                               
+           //echo $url;
+           $ch=curl_init($url);
+           curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+           curl_setopt($ch,CURLOPT_POST,1);
+           curl_setopt($ch,CURLOPT_POSTFIELDS,"");
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER,2);
+            $data = curl_exec($ch);
+            
+           curl_error($ch);
+// ****************************************Mobile Message End******************************************************                
+          // */           Mail::send('Mail.studentcollageinvitation', $data, function ($message) use ($data)
+                    {
+
+                        $message->to($data['email'], 'noreply@f1inschoolsindia.com')->subject('Welcome Aboard |F1 in Schools™ India');
+                        $message->from('noreply@f1inschoolsindia.com', 'F1 in Schools™ India');
+
+                    });
+                }
+                $idtoview = $request->student_id . '_' . $request->school_Id;
+                return redirect('student/team/show/' . base64_encode($idtoview))->with('success', 'Team Created  has been successfully');
+                return back()
+                    ->with('success', 'Team Created  has been successfully');
+
+            }
+
+        }
+        else
+        {
+
+            $acadmicyr = explode('-', $create_at->created_at);
+            if ($acadmicyr[0] == $date)
+            {
+
+                return back()->with('danger', 'Already Created Team this year');
+            }
+            else
+            {
+                if ($request->hasfile('team_file'))
+                {
+
+                    $image = $request->file('team_file');
+                    $name = $request->Team_Name . "_" . time() . "." . $image->getClientOriginalExtension();
+                    $image->move(public_path() . '/team/', $name);
+                    $team = new Team_Store();
+                    $team->team_Name = $request->Team_Name;
+                    $team->team_Description = $request->about_team;
+                    $team->team_Image = $name;
+                    $team->student_id = $request->student_id;
+                    $team->school_id = $request->school_Id;
+                    $team->typeofstudent = 'F1Senior';
+                    $team->save();
+                    
+                    $team->id;
+
+                    $studentRole = "role_" . $request->student_id;
+                    $s = new StudentTeam_Role();
+                    $s->teamId = $team->id;
+                    $s->schoolid = $request->school_Id;
+                    $s->studentid = $request->student_id;
+                    $s->Role_studentid = $studentRole;
+                    $s->studentRole = $request->CreatorRole;
+                    $s->status = 1;
+                    $s->typeofstudent = 'F1Senior';
+                    $s->save();
+
+                    foreach ($request->ids as $students_id)
+                    {
+
+                        $studentRole = "role_" . $students_id;
+                        $studentteamrole = new StudentTeam_Role();
+                        $studentteamrole->teamId = $team->id;
+                        $studentteamrole->schoolid = DB::table('team_store')
+                            ->find($team->id)->school_id;
+                        $studentteamrole->studentid = $students_id;
+                        $studentteamrole->Role_studentid = $studentRole;
+                        $studentteamrole->studentRole = $request->$studentRole;
+                        $studentteamrole->typeofstudent = 'F1Senior';
+                        $studentteamrole->save();
+                        
+                        $ids = $students_id . "_" . $team->id;
+
+                        $teamname = Team_Store::find($team->id)->team_Name;
+                        $studentinfo = DB::table('students')->where('id', $students_id)->first();
+                        $link = url('/college_teamstatus') . "/" . base64_encode($ids);
+                        $link1 = url('/college_teams_no') . "/" . base64_encode($ids);
+                        $teamname = Team_Store::find($team->id)->team_Name;
+                        $data = array(
+                            'username' => $studentinfo->name,
+                            'email' => $studentinfo->studentemail,
+                            'link' => $link,
+                            'link1' => $link1,
+                            'teamname' => $teamname
+                        );
+
+         $link2 = url('/invitation-college'). "/" . base64_encode($ids);
+		 /*
+// *********************************************Mobile Message****************************************************
+                   $yes = '<a href="'.url("/college_teamstatus/")."/".base64_encode($ids).'">yes</a>';
+            $No = '<a href="'.url("/college_teams_no/")."/".base64_encode($ids).'">No</a>';
+            $student = Studentinfo::find($students_id);
+            $schoolname = School::where('id',$student->school_id)->first()->school_name;
+             $apikey = "YXPskaQxMk6oxtQcQbPo2Q";
+             $apisender = "TOSAPP";
+            $msg = "Dear ".strtoupper($student->name).",\r\n".$schoolname." Welcome aboard the world’s largest STEM based challenge for school - F1 in Schools™ online Platform. You have been requested to join the team.".$teamname."\r\nPlease click on the link to accept the invitation\r\n click here:".$link2;
+
+             $num ='91'.$student->mobileno;    // MULTIPLE NUMBER VARIABLE PUT HERE...!                 
+             $ms = rawurlencode($msg);   //This for encode your message content                     
+            $url = 'https://www.smsgatewayhub.com/api/mt/SendSMS?APIKey='.$apikey.'&senderid='.$apisender.'&channel=2&DCS=0&flashsms=0&number='.$num.'&text='.$ms.'&route=1';
+                               
+           //echo $url;
+           $ch=curl_init($url);
+           curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+           curl_setopt($ch,CURLOPT_POST,1);
+           curl_setopt($ch,CURLOPT_POSTFIELDS,"");
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER,2);
+            $data = curl_exec($ch);
+            
+           curl_error($ch);
+// ****************************************Mobile Message End******************************************************  
+*/              
+                        Mail::send('Mail.studentcollageinvitation', $data, function ($message) use ($data)
+                        {
+
+                            $message->to($data['email'], 'noreply@f1inschoolsindia.com')->subject('Welcome Aboard |F1 in Schools™ India');
+                            $message->from('noreply@f1inschoolsindia.com', 'F1 in Schools™ India');
+
+                        });
+                    }
+                }
+
+            }
+
+            $idtoview = $request->student_id . '_' . $request->school_Id;
+
+            return redirect('student/team/show/' . base64_encode($idtoview))->with('success', 'Team Created  has been successfully');
+            // return back()->with('success', 'Team Created  has been successfully');
+            
+        }
+    }
+
+    public function view_team($stschid)
+    {
+
+        $email = Auth::user()->email;
+
+        $stschId = explode("_", base64_decode($stschid));
+
+        $sid = $stschId[0];
+
+        $scid = $stschId[1];
+
+        $studentname = DB::table('students')->find($sid)->name;
+        $schoolname = DB::table('schools')->find($scid)->school_name;
+
+        $check = StudentTeam_Role::where('studentid', $sid)->where('status', 1)
+            ->first()->teamId??'N/A';
+
+        if ($check != 'N/A')
+        {
+            // where('student_id',$sid."_student")->where('school_id',$scid)->
+            $ct = Team_Store::where('id', $check)->get();
+        }
+        else
+        {
+            $ct = Team_Store::where('student_id', $sid . "_student")->where('school_id', $scid)->get();
+        }
+
+        $studentName = DB::table('students')->select('students.id as student_id', 'students.name', 'students.register_type', 'students.order_status', 'schools.school_name', 'schools.id as school_id'.'students.profileimage')
+            ->join('schools', 'schools.id', '=', 'students.school_id')
+            ->where('studentemail', $email)->first();
+
+        $details = $this->viewsCousrseS();
+        if ($details != [])
+        {
+            $assigndata = $details['details'];
+            $systemdate = $details['systemdate'];
+            $pname = $details['pname'];
+            $studentid = $details['studentid'];
+            $schoolid = $details['schoolid'];
+            $planid = $details['planid'];
+        }
+
+  $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+
+        return view('student_college.Team.showTeam', compact('planid', 'schoolid', 'studentid', 'pname', 'systemdate', 'assigndata', 'studentName', 'sid', 'scid', 'studentname', 'schoolname', 'ct', 'collageTeamId', 'collageTeamuserstatus','Checkcomp'));
+    }
+
+    public function view_team_member($tssdid)
+    {
+
+        $email = Auth::user()->email;
+
+        $tssdId = explode("_", base64_decode($tssdid));
+
+        $teamid = $tssdId[0];
+        $scid = $tssdId[1];
+        $studentname = DB::table('students')->where('id', $tssdId[2])->first()->name;
+
+        $schoolname = DB::table('schools')->where('id', $tssdId[1])->first()->school_name;
+
+        $Teamname = DB::table('team_store')->select('team_Image', 'team_Name', 'team_Description')
+            ->where('id', $tssdId[0])->first();
+
+        $assignmem = StudentTeam_Role::join('students', 'students.id', '=', 'studentTeam_Role.studentid')->select('students.id', 'students.name', 'studentTeam_Role.studentRole', 'studentTeam_Role.status', 'studentTeam_Role.created_at', 'studentTeam_Role.updated_at')
+            ->where('teamId', $tssdId[0])->get();
+
+        $studentName = DB::table('students')->select('students.id as student_id', 'students.name', 'students.register_type', 'students.order_status', 'schools.school_name', 'schools.id as school_id','students.profileimage')
+            ->join('schools', 'schools.id', '=', 'students.school_id')
+            ->where('studentemail', $email)->first();
+
+        $details = $this->viewsCousrseS();
+        if ($details != [])
+        {
+            $assigndata = $details['details'];
+            $systemdate = $details['systemdate'];
+            $pname = $details['pname'];
+            $studentid = $details['studentid'];
+            $schoolid = $details['schoolid'];
+            $planid = $details['planid'];
+        }
+
+ $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+
+        return view('student_college.Team.view_team_member', compact('planid', 'schoolid', 'studentid', 'pname', 'systemdate', 'assigndata', 'studentName', 'scid', 'assignmem', 'schoolname', 'Teamname', 'studentname', 'teamid', 'collageTeamId', 'collageTeamuserstatus','Checkcomp'));
+
+    }
+
+    public function student_college_search(Request $req)
+    {
+
+        $name = $req->name;
+
+        $schoolid = $req->schoolid;
+        // where('order_status','Success')->
+
+        $checkStudent = DB::table('students')->where('studentemail', $name)->first();
+
+        if (!empty($checkStudent))
+        {
+
+            $getid = $checkStudent->id;
+
+            if ($checkStudent->register_type == 'F1Senior')
+            {
+
+                //    $datacheck = StudentTeam_Role::where('studentid', $getid)->where('status',1)->first();
+                // if(!empty($datacheck)){
+                // 	return json_encode(['error' => 'This person already exists in a team. Please try again with a new id.']);
+                // }else{
+                // 	$data = DB::table('students')->where('studentemail', $name)->first();
+                // 	return json_encode($data);
+                // }
+                $status = StudentTeam_Role::where('studentid', $getid)->first()->status??2;
+                if ($status == 2)
+                {
+
+                    // $users = User::where('id', '!=', Auth::id())->get();
+                    $email = Auth::user()->email;
+                    if ($email == $name)
+                    {
+                        return json_encode(['error' => 'OOps This Is  team Creator. Please try again with a new id.']);
+                    }
+                    else
+                    {
+                        if($checkStudent->order_status=='Success')
+                        {
+                        $data = DB::table('students')->where('studentemail', $name)->first();
+                        return json_encode($data);
+                        }
+                        else
+                        {
+                        return json_encode(['error' => 'Payment Pending for this user.']);
+  
+                        }
+                        
+                    }
+
+                }
+                else if ($status == 1)
+                {
+                    return json_encode(['error' => 'This person already exists in a team. Please try again with a new id.']);
+                }
+                else
+                {
+
+                    return json_encode(['error' => 'You have been already invited to a team. Please check your mail and complete the steps..']);
+
+                }
+
+                // if(!empty($datacheck)){
+                //     return json_encode(['error' => 'This person already exists in a team. Please try again with a new id.']);
+                // }else{
+                //     $data = DB::table('students')->where('studentemail', $name)->first();
+                //     return json_encode($data);
+                // }
+                
+
+                
+            }
+            else
+            {
+                return json_encode(['error' => 'This email already asign to school']);
+            }
+        }
+        else
+        {
+
+            return json_encode(['email' => $name]);
+        }
+
+    }
+
+    public function inviteUser(Request $request)
+    {
+
+        $invite_email = Auth::user()->email;
+
+        $user_email = $request->user_email;
+        $user_role = $request->role;
+
+        $sendUrl = $invite_email . "_" . $user_email . "_" . $user_role;
+
+        $sendParameter = base64_encode($sendUrl);
+        $sendParameter1 = base64_encode($sendUrl);
+
+        $data = array(
+            'username' => $user_email,
+            'link' => $sendParameter,
+            'link1' => $sendParameter1
+        );
+
+        $sendMail = Mail::send('Mail.userInvetitation', $data, function ($message) use ($data)
+        {
+
+            $message->to($data['username'], 'noreply@f1inschoolsindia.com')->subject('Welcome Aboard |F1 in Schools™ India');
+            $message->from('noreply@f1inschoolsindia.com', 'F1 in Schools™ India');
+
+        });
+
+        return "success";
+    }
+
+    public function user_invitation($id)
+    {
+
+        $sendParameter = base64_decode($id);
+
+        $explode = explode('_', $sendParameter);
+
+        $team_email = $explode[0];
+        $user_email = $explode[1];
+        $user_role = $explode[2];
+
+        $states = DB::table('tbl_state')->get();
+        return view('student_college.Register.register', compact('states', 'sendParameter', 'team_email', 'user_email', 'user_role'));
+
+    }
+
+    public function user_invitation_reject($id)
+    {
+
+        $sendParameter = base64_decode($id);
+
+        $explode = explode('_', $sendParameter);
+
+        $team_email = $explode[0];
+        $user_email = $explode[1];
+        $user_role = $explode[2];
+
+        $states = DB::table('tbl_state')->get();
+        return view('student_college.Register.register', compact('states', 'sendParameter', 'team_email', 'user_email', 'user_role'));
+
+    }
+
+    public function viewsCousrseS()
+    {
+        $email=Auth::user()->email;
+         $data=[];
+         $course_d=[];
+         $pname=null;
+         $planid=null;
+
+         $studentid = Studentinfo::where('studentemail',$email)->first()->id; 
+
+         $schoolid = Studentinfo::where('studentemail',$email)->first()->school_id; 
+
+         // $planid = DB::table('participantstudents')->where('schoolid',$schoolid)
+         //         ->where('student_id',$studentid)->orderBy('id','desc')->first()->planid??0;
+         $year=date("Y");
+         $systemdate  =  date("Y-m-d");
+         
+        $year = Login_Academic_Year::where('school',$schoolid)->first()->academicyear??'N/A';
+        if($year!='N/A')
+        {
+        $planid = Participatestudent::where('schoolid',$schoolid)
+                 ->where('student_id',$studentid)
+                 ->where('year',$year)
+                 ->first()->planid??0;
+        if($planid!=0)
+        {
+          $pname = Membership::where('id',$planid)->where('academicyear',$year)->first();
+          $doc_course = AssignedCoursetype::
+                        select('doc_types_id','course_masters_id','assigneddate')
+                        ->where('school_id',$schoolid)
+                        ->where('student_id',$studentid)
+                        ->where('acyear',$year)
+                        ->where('Plan_id',$planid)
+                        ->orderBy('assignedCoursetypes.course_masters_id', 'asc')
+                        ->groupBy('course_masters_id')
+                        ->get()->map(function($data){
+                         return $data;
+                         })->toArray();
+//***************************** Select Course From Assigned Course Type *************************
+
+              foreach($doc_course as $doc_course1)
+              {
+                  $tet=isset($videoactivity[0]->resumevedio)?$videoactivity[0]->resumevedio:0;
+               
+                 $course_d[]=DB::table('courses')
+                ->select('courses.id','courses.doc_types_id','courses.title','courses.description','courses.duration','courses.video_path','courses.doc_path','courses.thumbnail','doc_types.type')
+                 ->join('course_masters','course_masters.id','=','courses.course_masters_id')
+                 ->join('doc_types','doc_types.id','=','courses.doc_types_id')
+                 ->where('courses.doc_types_id',$doc_course1['doc_types_id'])
+                 ->where('courses.id',$doc_course1['course_masters_id'])
+                 ->get()->map(function($data) use($doc_course1,$tet) {
+                      $data->asshigneddate=$doc_course1['assigneddate'];
+
+                     $data->resumevedio = $tet;
+
+                      return $data;
+                 })->toArray();
+                
+              }
+//***************************** End  Select Course From Assigned Course Type *************************
+        }        
+        } 
+      $data=array('details'=>$course_d,'systemdate'=>$systemdate,'pname'=>$pname,'studentid'=>$studentid,'schoolid'=>$schoolid,'planid'=>$planid);
+     
+      return $data;
+
+    }
+
+    public function college_teamstatus($ids)
+    {
+
+        $arr = explode("_", base64_decode($ids));
+    
+        $s = $arr[0];
+        $t = $arr[1];
+        $check = StudentTeam_Role::where('studentid', $s)->where('teamId', $t)->where('status' , 1)->orwhere('status',2)->count();
+        if($check==0)
+        {
+         $up = StudentTeam_Role::where('studentid', $s)->where('teamId', $t)->update(['status' => 1]);
+         return redirect('/studentCollegeLogin');
+        }
+        else
+        {
+            return view('student_college.Student.message');
+        }
+
+
+    }
+
+    public function college_teams_no($ids)
+    {
+        $arr = explode("_", base64_decode($ids));
+
+        
+        $s = $arr[0];
+        $t = $arr[1];
+        $check = StudentTeam_Role::where('studentid', $s)->where('teamId', $t)->where('status' , 1)->orwhere('status',2)->count();
+        if($check==0)
+        {
+         $up = StudentTeam_Role::where('studentid', $s)->where('teamId', $t)->update(['status' => 2]);
+         return redirect('/studentCollegeLogin');
+        }
+        else
+        {
+            return view('student_college.Student.message');
+        }
+    }
+
+    public function edit_team($ids)
+    {
+
+        $email = Auth::user()->email;
+
+        $tssdId = explode("_", base64_decode($ids));
+
+        $teamid = $tssdId[0];
+        $school = $tssdId[1];
+        $student = $tssdId[2];
+        $studentname = Studentinfo::where('id', $tssdId[2])->first()->name;
+
+        $schoolname = School::where('id', $tssdId[1])->first()->school_name;
+
+        $editTeam = Team_Store::select('team_Image', 'team_Name', 'team_Description')->where('id', $tssdId[0])->first();
+
+        $student = StudentTeam_Role::join('students', 'students.id', '=', 'studentTeam_Role.studentid')->where('teamId', $tssdId[0])->get();
+
+        $student1 = StudentTeam_Role::join('students', 'students.id', '=', 'studentTeam_Role.studentid')->select('studentTeam_Role.studentid', 'students.name', 'studentTeam_Role.studentRole', 'studentTeam_Role.status')
+            ->where('teamId', $tssdId[0])->get();
+
+        $studentName = DB::table('students')->select('students.id as student_id', 'students.name', 'students.register_type', 'students.order_status', 'schools.school_name', 'schools.id as school_id','students.profileimage')
+            ->join('schools', 'schools.id', '=', 'students.school_id')
+            ->where('studentemail', $email)->first();
+
+        $details = $this->viewsCousrseS();
+        if ($details != [])
+        {
+            $assigndata = $details['details'];
+            $systemdate = $details['systemdate'];
+            $pname = $details['pname'];
+            $studentid = $details['studentid'];
+            $schoolid = $details['schoolid'];
+            $planid = $details['planid'];
+        }
+
+         $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+        return view('student_college.Team.EditCollageTeam', compact('planid', 'schoolid', 'studentid', 'pname', 'systemdate', 'assigndata', 'studentName', 'scid', 'assignmem', 'schoolname', 'editTeam', 'student', 'student1', 'studentname', 'teamid', 'collageTeamId', 'collageTeamuserstatus','Checkcomp'));
+    }
+
+    public function update_team(Request $req)
+    {
+        // dd($req->all());
+        StudentTeam_Role::where('teamId', $req->Team_id)
+            ->delete();
+        $req->ids = array_unique($req->ids??[]);
+        foreach ($req->ids as $students_id)
+        {
+
+            $y = explode("_", $students_id);
+            $students_id = $y[0];
+            $status = $y[1];
+            $studentRole = "role_" . $students_id;
+            $studentteamrole = new StudentTeam_Role();
+            $studentteamrole->teamId = $req->Team_id;
+            $studentteamrole->schoolid = DB::table('team_store')
+                ->find($req->Team_id)->school_id;
+            $studentteamrole->studentid = $students_id;
+            $studentteamrole->Role_studentid = $studentRole;
+            $studentteamrole->studentRole = $req->$studentRole;
+            $studentteamrole->status = $status;
+            $studentteamrole->typeofstudent = 'F1Senior';
+            $studentteamrole->save();
+
+            $ids = $students_id . "_" . $req->Team_id;
+            $teamname = Team_Store::find($req->Team_id)->team_Name;
+            $studentinfo = DB::table('students')->where('id', $students_id)->first();
+            $link = url('/college_teamstatus') . "/" . base64_encode($ids);
+            $link1 = url('/college_teams_no') . "/" . base64_encode($ids);
+            $teamname = Team_Store::find($req->Team_id)->team_Name;
+            $data = array(
+                'username' => $studentinfo->name,
+                'email' => $studentinfo->studentemail,
+                'link' => $link,
+                'link1' => $link1,
+                'teamname' => $teamname
+            );
+// *********************************************Mobile Message****************************************************
+$link2 = url('/invitation-college'). "/" . base64_encode($ids); 
+            $yes = '<a href="'.url("/college_teamstatus/")."/".base64_encode($ids).'">yes</a>';
+            $No = '<a href="'.url("/college_teams_no/")."/".base64_encode($ids).'">No</a>';
+
+            $student = Studentinfo::find($students_id);
+            $schoolname = School::where('id',$student->school_id)->first()->school_name;
+             $apikey = "YXPskaQxMk6oxtQcQbPo2Q";
+             $apisender = "TOSAPP";
+             $msg = "Dear ".strtoupper($student->name).",\r\n".$schoolname." Welcome aboard the world’s largest STEM based challenge for school - F1 in Schools™ online Platform. You have been requested to join the team.".$teamname."\r\nPlease click on the link to accept the invitation\r\n click here:".$link2;
+
+              $num ='91'.$student->mobileno;     // MULTIPLE NUMBER VARIABLE PUT HERE...!                 
+             $ms = rawurlencode($msg);   //This for encode your message content                     
+            $url = 'https://www.smsgatewayhub.com/api/mt/SendSMS?APIKey='.$apikey.'&senderid='.$apisender.'&channel=2&DCS=0&flashsms=0&number='.$num.'&text='.$ms.'&route=1';
+                               
+           //echo $url;
+           $ch=curl_init($url);
+           curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+           curl_setopt($ch,CURLOPT_POST,1);
+           curl_setopt($ch,CURLOPT_POSTFIELDS,"");
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER,2);
+            $data = curl_exec($ch);
+           curl_error($ch);
+            
+
+            // Mail::send('Mail.studentcollageinvitation', $data, function ($message) use ($data)
+            // {
+
+            //     $message->to($data['email'], 'noreply@f1inschoolsindia.com')->subject('Welcome Aboard |F1 in Schools™ India');
+            //     $message->from('noreply@f1inschoolsindia.com', 'F1 in Schools™ India');
+
+            // });
+
+            // }
+            
+        }
+        // dd($req->hasfile('team_file'));
+        if ($req->hasfile('team_file'))
+        {
+            $image = $req->file('team_file');
+            $name = $req->Team_Name . "_" . time() . "." . $image->getClientOriginalExtension();
+            $image->move(public_path() . '/team/', $name);
+            Team_Store::where('id', $req->Team_id)
+                ->update(['team_Name' => $req->Team_Name, 'team_Description' => $req->about_team, 'team_Image' => $name, ]);
+
+        }
+        else
+        {
+            Team_Store::where('id', $req->Team_id)
+                ->update(['team_Name' => $req->Team_Name, 'team_Description' => $req->about_team,
+            // 'team_Image' => $name,
+            ]);
+        }
+        $ids = $req->Team_id . "_" . $req->school_Id . "_" . $req->student_id;
+        return redirect('/student/team/view_team_member/' . base64_encode($ids));
+        dd($req->all());
+    }
+
+
+    public function student_Collage_profileedit(Request $req)
+   {
+       if($req->ajax())
+       {
+        $studentid=$req->id;
+        //$data= Student::where('id',$studentid)->first()->toArray();
+              $data= Studentinfo::where('id',$studentid)->get()->map(function($input) use($studentid){
+              $teamid=StudentTeam_Role::where('studentid',$studentid)->select('teamid')->first();
+               if(isset($teamid))
+               {
+                $teamid=StudentTeam_Role::where('studentid',$studentid)->select('teamid')->first()->toArray();
+                $input['teamname']=Team_Store::where('id',$teamid)->first()->team_Name; 
+               }
+               else{
+                $input['teamname']='No Team Exists';
+               }                           
+              $input['classdata']=db::table('class')->select('id','class')->get()->toArray();  
+              $input['tshirt']=db::table('tshirt')->select('id','tsize')->get()->toArray(); 
+                return $input;
+                })->toArray();
+              return response()->json($data);
+       // echo json_encode($data);
+       }
+
+   }
+
+      public function updatestudentCollageinfo(Request $request)
+   {  
+    $data = $request->all();
+
+    
+
+        $rules = array(
+            'name' => ['regex:/^([a-zA-Z0-9]+|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{1,}|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{3,}\s{1}[a-zA-Z0-9]{1,})$/i'],
+         'mobileno' => 'digits:10',
+            'guardianname1' => ['sometimes',
+            'nullable',
+            'regex:/^([a-zA-Z0-9]+|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{1,}|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{3,}\s{1}[a-zA-Z0-9]{1,})$/i'],
+            'guardianphone1' => 'sometimes|nullable|digits:10',
+            'guardianemail1' => 'sometimes|nullable|email',
+            'guardianname2' => ['sometimes',
+            'nullable',
+            'regex:/^([a-zA-Z0-9]+|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{1,}|[a-zA-Z0-9]+\s{1}[a-zA-Z0-9]{3,}\s{1}[a-zA-Z0-9]{1,})$/i'],
+            'guardianphone2' => 'sometimes|nullable|digits:10',
+            'guardianemail2' => 'sometimes|nullable|email'
+        );
+
+        $error = Validator::make($request->all() , $rules);
+
+        if ($error->fails())
+        {
+            return response()
+                ->json(['errors' => $error->errors()
+                ->all() ]);
+        }
+
+        try
+        {
+        
+            $check = Studentinfo::where('id', $data['hid'])->update(['name' => $data['name'], 'class' => $data['class'], 'section' => $data['section'], 'dob' => $data['dob'], 'mobileno' => $data['mobileno'], 'address' => $data['address'], 'tsize' => $data['tsize'], 'guardianname1' => $data['guardianname1'], 'guardianemail1' => $data['guardianemail1'], 'guardianphone1' => $data['guardianphone1'], 'guardianname2' => $data['guardianname2'], 'guardianemail2' => $data['guardianemail2'], 'guardianphone2' => $data['guardianphone2'],'profileimage'=>$data['image111']]);
+        }
+        catch(\Exception $e)
+        {
+             echo json_encode($e->getMessage());
+            return response()->json(['errors' => $e]);
+        }
+
+        //dd($check);
+        if ($check)
+        {
+            return response()->json(['success' => 'Data Updated Successfully.']);
+
+           
+        }
+
+
+   }
+
+public function upload_image_StudentCollage(Request $request)
+
+    {
+
+        $image = $request->image;
+
+
+
+        list($type, $image) = explode(';', $image);
+
+        list(, $image)      = explode(',', $image);
+
+        $image = base64_decode($image);
+       
+        $image_name= time().'.png';
+
+        $path = public_path('studentprofileimage/'.$image_name);
+
+
+
+        file_put_contents($path, $image);
+
+        return response()->json(['status'=>$image_name]);
+
+    }
+
+// *******************************************Competition Process in Student Collage**************************************
+public function show_competition($student_school_id)
+{
+    $email = Auth::user()->email;
+
+  $student_school_id = explode("_",base64_decode($student_school_id));
+  $student_id   = $student_school_id[0];
+  $school_id    = $student_school_id[1];
+  $studentiddd  = $student_id."_student";
+ //team name start
+   $studentrole = DB::table('studentTeam_Role')
+                        ->where('schoolid',$school_id)
+                        ->where('studentid',$student_id)
+                        ->where('typeofstudent','F1Senior')
+                        // ->where('created_at', date('Y'))
+                        ->first(); 
+    
+   $teamname = DB::table('team_store')
+                      ->where('id',$studentrole->teamId??0)
+                      ->where('typeofstudent','F1Senior')
+                      ->first();
+                  
+ //team end
+
+  $checkTeamId = DB::table('team_store')
+                      ->where('student_id',$studentiddd)
+                      ->where('school_id',$school_id)
+                       ->where('typeofstudent','F1Senior')
+                      ->first();
+
+$teams= DB::table('studentTeam_Role')
+                        ->where('studentid',$student_id)
+                        ->where('schoolid',$school_id)
+                         ->where('typeofstudent','F1Senior')
+                        ->first();
+$teamid=$teams->teamId??0;
+  if($checkTeamId==null){
+ $strole= DB::table('studentTeam_Role')
+                        ->where('studentid',$student_id)
+                        ->where('schoolid',$school_id)
+                        ->where('typeofstudent','F1Senior')
+                        ->first();
+if($strole==null)
+{
+     $creatorteamid ='N/A';
+}
+else
+{
+$creatorteamid =$strole->studentid;
+}
+                     
+                        
+
+
+  }else{
+
+   $creatorteamid = $checkTeamId->id;
+
+                        
+  }
+
+
+  $student_name  = DB::table('students')->find($student_id)->name;
+  $school_name   = DB::table('schools')->find($school_id)->school_name;
+
+   $Academicyear = Login_Academic_Year::where('school',$school_id)->first()->academicyear??'N/A';
+
+
+  $schoolTeamComp = DB::table('schoolteamcomp')
+                    ->where('school_id', $school_id)
+                    ->where('tmpid',$teams->teamId)
+                    ->where('typeid',1)
+                    ->groupBy('schoolteamcomp.cmpid')
+                        ->get(); 
+
+
+  $competition = [];                   
+  foreach ($schoolTeamComp as $compid) 
+  {
+      $competition[] = $compid->cmpid;                                
+  }    
+
+          
+  $competition = DB::table('Competitionstore')
+                        ->whereIn('id', $competition)
+                        // ->where('academicyear',$Academicyear)
+                        ->orderBy('id', 'DESC')
+                        ->get();
+          
+ 
+                
+
+                        $hide=[];
+ $doc=[];  
+  $arr1=[]; 
+  foreach($competition as $key1=>$competitions){
+    $competition[$key1]->awardsTeam =  Awards::where('compid',$competitions->id)
+                  ->where('schooldid',$school_id)
+                  ->get();
+
+  if(isset($competition[$key1]->support_title)){                       
+  foreach(json_decode($competition[$key1]->support_title) as $key=>$abc)
+  {
+    $arr=json_decode($competition[$key1]->support_from);
+   
+    if($arr[$key]==1)
+    {
+        
+        $upload = DB::table('document_upload')->where('school_id',$school_id)->where('team_id',$teamid)->where('competition_id',$competition[$key1]->id)->where('flag',$key)->count();
+
+        $uploads = DB::table('document_upload')->where('school_id',$school_id)->where('team_id',$teamid)->where('competition_id',$competition[$key1]->id)->where('flag',$key)->first();
+     
+if($uploads!=null)
+       {
+    
+       $student = DB::table('students')
+                      ->where('id', $uploads->student_id)
+                      
+                      ->first(); 
+        
+      $arr1[$key1][$key]['name']=$student->name;
+      $arr1[$key1][$key]['image']=$uploads->image;
+     $arr1[$key1][$key]['updated_at']=$uploads->updated1;
+      // $arr1[$key1][$key]['updated1'] = date('d/m/Y H:i:s a');
+      
+  }
+    }else{
+       if(isset($checkTeamId->id))
+     {
+     $totalstydents = DB::table('studentTeam_Role')->where('teamId',$checkTeamId->id)->get()->map(function($datas){
+      
+       return $datas->studentid;
+     })->toArray();
+        
+       foreach($totalstydents as $keys=>$totalstydent)
+     {
+      $pending = DB::table('document_upload')->where('student_id',$totalstydent)->where('competition_id',$competition[$key1]->id)->where('flag',$key)->first();
+             if($pending!=null)
+       {
+        $student = DB::table('students')
+                      ->where('id', $totalstydent)
+                      ->first(); 
+           $doc[$key1][$key][$keys]['name']=$student->name;
+           $doc[$key1][$key][$keys]['status']="Submitted";
+            //$docu[$key]->name=
+       }
+       else{
+          $student = DB::table('students')
+                      ->where('id', $totalstydent)
+                      ->first(); 
+           $doc[$key1][$key][$keys]['name']=$student->name;
+           $doc[$key1][$key][$keys]['status']="Pending";
+            
+       }
+      
+     }
+     }
+
+      $uploads = DB::table('document_upload')->where('student_id',$student_id)->where('competition_id',$competition[$key1]->id)->where('flag',$key)->first();
+     
+       if($uploads!=null)
+       {
+     
+      $student = DB::table('students')
+                      ->where('id', $uploads->student_id)
+                      ->first(); 
+        
+      $arr1[$key1][$key]['name']=$student->name;
+      $arr1[$key1][$key]['image']=$uploads->image;
+     $arr1[$key1][$key]['updated_at']=$uploads->updated1;
+      // $arr1[$key1][$key]['updated1'] = date('d/m/Y H:i:s a');
+}
+      $upload = DB::table('document_upload')->where('student_id',$student_id)->where('team_id',$teamid)->where('competition_id',$competition[$key1]->id)->where('flag',$key)->count();
+
+   }
+    
+    if($upload!=0){
+      $hide[]=$key; 
+    }
+     $arr1[$key1][$key]['enable']=0;
+       if(date('m/d/Y') < $competition[$key1]->Start_Date)
+       {
+         $arr1[$key1][$key]['enable']=1;
+       } 
+  
+}
+ }
+  }
+
+
+
+    // $studentName = DB::table('students')
+    //                   ->select('students.name','schools.school_name','students.register_type')
+    //                   ->join('schools','schools.id','=','students.school_id')
+    //                   ->where('mobileno',Auth::user()->mobile_no)
+    //                   ->where('dob',Auth::user()->dob)->first();    
+
+
+
+        $details=$this->viewsCousrseS();
+        if($details!=[])
+        {
+         $assigndata=$details['details'];
+         $systemdate=$details['systemdate'];
+         $pname=$details['pname'];
+         $studentid=$details['studentid'];
+         $schoolid=$details['schoolid'];
+         $planid=$details['planid'];
+        }       
+         // $cId=Schoolteamcomp::where('school_id',$schoolid)->where('tmpid',$creatorteamid)->first()->cmpid;
+
+                    
+      $test=DB::table('document_upload')
+                  ->where('school_id',$schoolid)->where('team_id',$creatorteamid)->get();
+
+      $compId=Schoolteamcomp::where('school_id',$schoolid)->count();
+      
+ $teamstoreCreateId=DB::table('team_store')
+                        ->where('school_id',$schoolid)
+                        ->where('student_id',$studentid."_student")
+                        // ->where('created_at', date('Y'))
+                        ->count();
+      $studenteamroleId=DB::table('studentTeam_Role')
+                        ->where('schoolid',$schoolid)
+                        ->where('studentid',$studentid)
+                        // ->where('created_at', date('Y'))
+                        ->count();
+
+
+
+// *********************************************************
+ $studentName = Studentinfo::select('students.name', 'schools.school_name', 'students.register_type','order_status','students.profileimage')
+                    ->join('schools', 'schools.id', '=', 'students.school_id')
+                    ->where('studentemail', $email)->first();
+
+
+    $Checkcomp = 0;
+                $collageTeamId = StudentTeam_Role::where('studentid', $studentid)->first()->teamId??'N/A';
+                if ($collageTeamId != 'N/A')
+                {
+                    $status = StudentTeam_Role::where('studentid', $studentid)->first()->status;
+                    if ($status == 2)
+                    {
+                        $collageTeamId = 'N/A';
+                        $collageTeamuserstatus = 2;
+                        $Checkcomp = 0;
+
+                    }
+                    else
+                    {
+                        $collageTeamId = Team_Store::where('id', $collageTeamId)->first() ??'N/A';
+                        $collageTeamuserstatus = $status;
+                        $Checkcomp = Schoolteamcomp::where('tmpid',$collageTeamId->id)->count();
+                    }
+
+                }
+                else
+                {
+                    $collageTeamId = 'N/A';
+                    $collageTeamuserstatus = 2;
+                    $Checkcomp = 0;
+
+                }
+    
+   return view('student_college.Student.CollegestudentCompetition', compact('systemdate', 'assigndata', 'planid', 'schoolid', 'studentid', 'pname', 'studentName', 'sid', 'scid', 'students', 'studentname', 'collageTeamId', 'collageTeamuserstatus','competition','test','hide','arr1','doc','enable','teamname','student_name','school_name','teamid','Checkcomp'));
+
+}
+//***********************************End Competition Process in Student Collage**************************************
+
+
+public function invitation_college($id)
+{
+     return view('student_college.Student.yes_no', compact('id'));
+}
+
+    public function logout()
+    {
+        Auth::logout();
+        Session::flush();
+        return redirect('/studentCollegeLogin');
+    }
+
+}
+
